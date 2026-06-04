@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const port = 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 app.use(cors());
@@ -25,10 +25,47 @@ async function run() {
     await client.connect();
     const database = client.db("Hireloop");
     const jobCollections = database.collection("jobs");
-
+    // Get all job API
+    app.get("/jobs", async (req, res) => {
+      const query = {};
+      if (req.query.companyId) {
+        query.companyId = req.query.companyId;
+      }
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+      const cursor = jobCollections.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    // Create new job API
     app.post("/jobs", async (req, res) => {
       const job = req.body;
       const result = await jobCollections.insertOne(job);
+      res.send(result);
+    });
+    // Get single job API
+    app.get("/jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const result = await jobCollections.findOne(query);
+      res.send(result);
+    });
+    // Update Job:
+    app.patch("/jobs/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const updateJob = req.body;
+
+      const result = await jobCollections.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: updateJob,
+        },
+      );
+
       res.send(result);
     });
     // Send a ping to confirm a successful connection
