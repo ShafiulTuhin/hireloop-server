@@ -25,6 +25,7 @@ async function run() {
     await client.connect();
     const database = client.db("Hireloop");
     const jobCollections = database.collection("jobs");
+    const companyCollections = database.collection("company");
     // Get all job API
     app.get("/jobs", async (req, res) => {
       const query = {};
@@ -68,7 +69,34 @@ async function run() {
 
       res.send(result);
     });
-    // Send a ping to confirm a successful connection
+    // Delete Job
+    app.delete("/jobs/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const result = jobCollections.deleteOne(query);
+      res.send(result);
+    });
+    // Get all company API
+
+    // Create new company API
+    app.post("/company", async (req, res) => {
+      const job = req.body;
+      const result = await companyCollections.insertOne(job);
+      res.send(result);
+    });
+    // Get company by email:
+    app.get("/company/:email", async (req, res) => {
+      const { email } = req.params;
+
+      const result = await companyCollections
+        .find({ userEmail: email })
+        .toArray();
+
+      res.send(result);
+    });
+    // Send a ping to confirm a successfl connection
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
