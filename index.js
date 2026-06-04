@@ -42,7 +42,11 @@ async function run() {
     // Create new job API
     app.post("/jobs", async (req, res) => {
       const job = req.body;
-      const result = await jobCollections.insertOne(job);
+      const newJob = {
+        ...job,
+        createdAt: new Date(),
+      };
+      const result = await jobCollections.insertOne(newJob);
       res.send(result);
     });
     // Get single job API
@@ -82,19 +86,33 @@ async function run() {
 
     // Create new company API
     app.post("/company", async (req, res) => {
-      const job = req.body;
-      const result = await companyCollections.insertOne(job);
+      const company = req.body;
+      const newCompany = {
+        ...company,
+        createdAt: new Date(),
+      };
+      const result = await companyCollections.insertOne(newCompany);
       res.send(result);
     });
     // Get company by email:
-    app.get("/company/:email", async (req, res) => {
-      const { email } = req.params;
+    // app.get("/my/company/:email", async (req, res) => {
+    //   const { email } = req.params;
 
-      const result = await companyCollections
-        .find({ userEmail: email })
-        .toArray();
+    //   const result = await companyCollections
+    //     .find({ recruiterEmail: email })
+    //     .toArray();
 
-      res.send(result);
+    //   res.send(result);
+    // });
+
+    app.get("/my/company/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const result = await companyCollections.findOne({
+        recruiterId: id,
+      });
+
+      res.send(result || {});
     });
     // Send a ping to confirm a successfl connection
     await client.db("admin").command({ ping: 1 });
