@@ -26,6 +26,7 @@ async function run() {
     const database = client.db("Hireloop");
     const jobCollections = database.collection("jobs");
     const companyCollections = database.collection("company");
+    const seekerJobCollections = database.collection("seekerJob");
     // Get all job API
     app.get("/jobs", async (req, res) => {
       const query = {};
@@ -113,6 +114,40 @@ async function run() {
       });
 
       res.send(result || {});
+    });
+
+    // Job seekers job Create API
+    app.post("/seeker/jobs", async (req, res) => {
+      const body = req.body;
+      const result = await seekerJobCollections.insertOne(body);
+      res.send(result);
+    });
+    //
+    app.get("/seeker/jobs", async (req, res) => {
+      const result = await seekerJobCollections.find().toArray();
+      res.send(result);
+    });
+    // Get applicant jobs by companyId(FOr recruiter)
+    app.get("/seeker/jobs/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const result = await seekerJobCollections
+        .find({ companyId: id })
+        .toArray();
+      o;
+      res.send(result);
+      clear;
+    });
+    // Get applicants jobs(For seeker/applicant)
+    app.get("/seeker/jobs/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const result = await seekerJobCollections
+        .find({ seekerId: id })
+        .toArray();
+
+      res.send(result);
+      clear;
     });
     // Send a ping to confirm a successfl connection
     await client.db("admin").command({ ping: 1 });
