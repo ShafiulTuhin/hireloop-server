@@ -30,6 +30,7 @@ async function run() {
     const jobCollections = database.collection("jobs");
     const companyCollections = database.collection("company");
     const seekerJobCollections = database.collection("seekerJob");
+    const profileCollections = database.collection("profile");
     // Get all job API
     // app.get("/jobs", async (req, res) => {
     //   const query = {};
@@ -86,17 +87,8 @@ async function run() {
           $in: req.query.location.split(","),
         };
       }
-
       // ---------------- SALARY ----------------
-      // if (req.query.minSalary && req.query.maxSalary) {
-      //   query.minSalary = {
-      //     $gte: Number(req.query.minSalary),
-      //   };
 
-      //   query.maxSalary = {
-      //     $lte: Number(req.query.maxSalary),
-      //   };
-      // }
       if (req.query.minSalary || req.query.maxSalary) {
         const min = Number(req.query.minSalary);
         const max = Number(req.query.maxSalary);
@@ -115,7 +107,7 @@ async function run() {
           });
         }
       }
-      console.log("REQ QUERY:", req.query);
+      // console.log("REQ QUERY:", req.query);
       const cursor = jobCollections.find(query);
       const result = await cursor.toArray();
 
@@ -226,6 +218,13 @@ async function run() {
         .find({ seekerId: id })
         .toArray();
 
+      res.send(result);
+    });
+    // Create user profile:
+    app.post("/profile", async (req, res) => {
+      const profile = req.body;
+
+      const result = await profileCollections.insertOne(profile);
       res.send(result);
     });
     // Send a ping to confirm a successfl connection
