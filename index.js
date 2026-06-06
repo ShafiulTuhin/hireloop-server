@@ -1,9 +1,12 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
-const port = 5000;
+const dotenv = require("dotenv");
+
+dotenv.config();
+const port = process.env.PORT;
+
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-require("dotenv").config();
 
 app.use(cors());
 app.use(express.json());
@@ -22,22 +25,100 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const database = client.db("Hireloop");
     const jobCollections = database.collection("jobs");
     const companyCollections = database.collection("company");
     const seekerJobCollections = database.collection("seekerJob");
     // Get all job API
+    // app.get("/jobs", async (req, res) => {
+    //   const query = {};
+    //   if (req.query.companyId) {
+    //     query.companyId = req.query.companyId;
+    //   }
+    //   if (req.query.status) {
+    //     query.status = req.query.status;
+    //   }
+    //   const cursor = jobCollections.find(query);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
     app.get("/jobs", async (req, res) => {
       const query = {};
+
+      // ---------------- EXISTING FILTERS ----------------
       if (req.query.companyId) {
         query.companyId = req.query.companyId;
       }
+
       if (req.query.status) {
         query.status = req.query.status;
       }
+
+      // ---------------- SEARCH ----------------
+      if (req.query.search) {
+        query.$or = [
+          {
+            jobTitle: {
+              $regex: req.query.search,
+              $options: "i",
+            },
+          },
+          {
+            companyname: {
+              $regex: req.query.search,
+              $options: "i",
+            },
+          },
+        ];
+      }
+
+      // ---------------- CATEGORY ----------------
+      if (req.query.category) {
+        query.jobCategory = {
+          $in: req.query.category.split(","),
+        };
+      }
+
+      // ---------------- LOCATION ----------------
+      if (req.query.location) {
+        query.location = {
+          $in: req.query.location.split(","),
+        };
+      }
+
+      // ---------------- SALARY ----------------
+      // if (req.query.minSalary && req.query.maxSalary) {
+      //   query.minSalary = {
+      //     $gte: Number(req.query.minSalary),
+      //   };
+
+      //   query.maxSalary = {
+      //     $lte: Number(req.query.maxSalary),
+      //   };
+      // }
+      if (req.query.minSalary || req.query.maxSalary) {
+        const min = Number(req.query.minSalary);
+        const max = Number(req.query.maxSalary);
+
+        query.$and = [];
+
+        if (req.query.minSalary) {
+          query.$and.push({
+            maxSalary: { $gte: String(min) },
+          });
+        }
+
+        if (req.query.maxSalary) {
+          query.$and.push({
+            minSalary: { $lte: String(max) },
+          });
+        }
+      }
+      console.log("REQ QUERY:", req.query);
       const cursor = jobCollections.find(query);
       const result = await cursor.toArray();
+
       res.send(result);
     });
     // Create new job API
@@ -128,18 +209,17 @@ async function run() {
       res.send(result);
     });
     // Get applicant jobs by companyId(FOr recruiter)
-    app.get("/seeker/jobs/:id", async (req, res) => {
+    app.get("/seeker/jobs/company/:id", async (req, res) => {
       const { id } = req.params;
 
       const result = await seekerJobCollections
         .find({ companyId: id })
         .toArray();
-      o;
+
       res.send(result);
-      clear;
     });
     // Get applicants jobs(For seeker/applicant)
-    app.get("/seeker/jobs/:id", async (req, res) => {
+    app.get("/seeker/jobs/seeker/:id", async (req, res) => {
       const { id } = req.params;
 
       const result = await seekerJobCollections
@@ -147,10 +227,9 @@ async function run() {
         .toArray();
 
       res.send(result);
-      clear;
     });
     // Send a ping to confirm a successfl connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
@@ -161,6 +240,6 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.listen(port, () => {
+app.listen(5000, () => {
   console.log(`Example app listening on port ${port}`);
 });
