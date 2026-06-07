@@ -227,6 +227,22 @@ async function run() {
       const result = await profileCollections.insertOne(profile);
       res.send(result);
     });
+    // Get user profile
+    app.get("/profile/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await profileCollections.findOne({ userId: id });
+
+        if (!result) {
+          return res.status(404).send({ message: "Profile not found" });
+        }
+
+        res.status(200).send(result);
+      } catch (error) {
+        res.status(500).send({ error: error.message });
+      }
+    });
     // Send a ping to confirm a successfl connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
