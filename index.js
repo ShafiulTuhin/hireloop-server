@@ -243,6 +243,21 @@ async function run() {
         res.status(500).send({ error: error.message });
       }
     });
+    // Update Job:
+    app.patch("/profile/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const updateProfile = req.body;
+
+      const result = await profileCollections.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: updateProfile,
+        },
+      );
+
+      res.send(result);
+    });
     // Send a ping to confirm a successfl connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
