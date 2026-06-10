@@ -32,19 +32,9 @@ async function run() {
     const seekerJobCollections = database.collection("seekerJob");
     const profileCollections = database.collection("profile");
     const planCollections = database.collection("plan");
-    // Get all job API
-    // app.get("/jobs", async (req, res) => {
-    //   const query = {};
-    //   if (req.query.companyId) {
-    //     query.companyId = req.query.companyId;
-    //   }
-    //   if (req.query.status) {
-    //     query.status = req.query.status;
-    //   }
-    //   const cursor = jobCollections.find(query);
-    //   const result = await cursor.toArray();
-    //   res.send(result);
-    // });
+    const subscriptionCollections = database.collection("subscription");
+    const userCollections = database.collection("user");
+
     app.get("/jobs", async (req, res) => {
       const query = {};
 
@@ -169,6 +159,11 @@ async function run() {
       const result = await companyCollections.insertOne(newCompany);
       res.send(result);
     });
+    // Get companies
+    app.get("/company", async (req, res) => {
+      const result = await companyCollections.find().toArray();
+      res.send(result);
+    });
     // Get company by email:
     // app.get("/my/company/:email", async (req, res) => {
     //   const { email } = req.params;
@@ -260,13 +255,72 @@ async function run() {
       res.send(result);
     });
     // Ge single plan
+    // app.get("/plan", async (req, res) => {
+    //   const query = {};
+    //   if (req.query._id) {
+    //     query.id = req.query._id;
+    //   }
+    //   const plan = await planCollections.findOne(query);
+    //   res.send(plan);
+    // });
     app.get("/plan", async (req, res) => {
-      const query = {};
-      if (req.query._id) {
-        query.id = req.query._id;
+      try {
+        const id = req.query._id;
+
+        const plan = await planCollections.findOne({ _id: id });
+
+        if (!plan) {
+          return res.status(404).json({
+            success: false,
+            message: "Plan not found",
+          });
+        }
+
+        return res.json(plan); // ALWAYS JSON
+      } catch (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Server error",
+        });
       }
-      const plan = await planCollections.findOne(query);
-      res.send(plan);
+    });
+
+    // Create subscription:
+    app.post("/subscriptions", async (req, res) => {
+      try {
+        const data = req.body;
+
+        const newSubscription = {
+          ...data,
+          createdAt: new Date(),
+        };
+
+        const result = await subscriptionCollections.insertOne(newSubscription);
+
+        const filter = { email: data.email };
+
+        const updateUserInfo = {
+          $set: {
+            plan: data.planId,
+          },
+        };
+
+        const updateUser = await userCollections.updateOne(
+          filter,
+          updateUserInfo,
+        );
+
+        return res.json({
+          success: true,
+          insertedId: result.insertedId,
+          userUpdated: updateUser.modifiedCount > 0,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to create subscription",
+        });
+      }
     });
 
     console.log(
