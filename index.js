@@ -164,6 +164,22 @@ async function run() {
       const result = await companyCollections.find().toArray();
       res.send(result);
     });
+
+    // Get company by ID(For Admin/findby company id)
+    app.patch("/company/:id", async (req, res) => {
+      const { id } = req.params;
+
+      const { status } = req.body; // 👈 only take status
+
+      const result = await companyCollections.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: { status }, // 👈 only update status
+        },
+      );
+
+      res.send(result);
+    });
     // Get company by email:
     // app.get("/my/company/:email", async (req, res) => {
     //   const { email } = req.params;
@@ -174,7 +190,7 @@ async function run() {
 
     //   res.send(result);
     // });
-
+    // Get company by ID (Recruiter use/find by recruiter ID)
     app.get("/my/company/:id", async (req, res) => {
       const { id } = req.params;
 
