@@ -147,8 +147,8 @@ async function run() {
       const result = jobCollections.deleteOne(query);
       res.send(result);
     });
-    // Get all company API
 
+    // Get all company API
     // Create new company API
     app.post("/company", async (req, res) => {
       const company = req.body;
@@ -180,16 +180,7 @@ async function run() {
 
       res.send(result);
     });
-    // Get company by email:
-    // app.get("/my/company/:email", async (req, res) => {
-    //   const { email } = req.params;
 
-    //   const result = await companyCollections
-    //     .find({ recruiterEmail: email })
-    //     .toArray();
-
-    //   res.send(result);
-    // });
     // Get company by ID (Recruiter use/find by recruiter ID)
     app.get("/my/company/:id", async (req, res) => {
       const { id } = req.params;
@@ -270,15 +261,7 @@ async function run() {
 
       res.send(result);
     });
-    // Ge single plan
-    // app.get("/plan", async (req, res) => {
-    //   const query = {};
-    //   if (req.query._id) {
-    //     query.id = req.query._id;
-    //   }
-    //   const plan = await planCollections.findOne(query);
-    //   res.send(plan);
-    // });
+
     app.get("/plan", async (req, res) => {
       try {
         const id = req.query._id;
