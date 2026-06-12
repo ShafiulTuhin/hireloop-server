@@ -11,24 +11,33 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 app.use(cors());
 app.use(express.json());
 
-const verifyToken = async (req, res, next) => {
-  const header = req?.headers.authorization;
-  if (!header) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  const token = header.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  try {
-    const { payload } = await jwtVerify(token, JWKS);
-    // console.log(payload);
+// const verifyToken = async (req, res, next) => {
+//   const header = req?.headers.authorization;
+//   if (!header) {
+//     return res.status(401).json({ message: "Unauthorized" });
+//   }
+//   const token = header.split(" ")[1];
+//   if (!token) {
+//     return res.status(401).json({ message: "Unauthorized" });
+//   }
+//     const query = { token: token };
+//     const session = await sessionCollections.findOne(query);
+//     console.log(session);
 
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
-};
+//   try {
+//     const { payload } = await jwtVerify(token, JWKS);
+//     // console.log(payload);
+
+//     next();
+//   } catch (error) {
+//     console.error(error); // <-- Important
+//     return res.status(403).json({
+//       message: "Forbidden",
+//       error: error.message,
+//     });
+//   }
+// };
+
 const logger = async (req, res, next) => {
   console.log("Logger....");
   next();
@@ -57,7 +66,73 @@ async function run() {
     const planCollections = database.collection("plan");
     const subscriptionCollections = database.collection("subscription");
     const userCollections = database.collection("user");
+    const sessionCollections = database.collection("session");
 
+    const verifyToken = async (req, res, next) => {
+      const header = req?.headers.authorization;
+      if (!header) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const token = header.split(" ")[1];
+      if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const query = { token: token };
+      const session = await sessionCollections.findOne(query);
+      const userId = session.userId;
+
+      const userQuery = {
+        _id: userId,
+      };
+
+      const user = await userCollections.findOne(userQuery);
+      console.log(user);
+      // req.user = user
+
+      next();
+      // try {
+      //   const { payload } = await jwtVerify(token, JWKS);
+      //   // console.log(payload);
+
+      // } catch (error) {
+      //   console.error(error); // <-- Important
+      //   return res.status(403).json({
+      //     message: "Forbidden",
+      //     error: error.message,
+      //   });
+      // }
+    };
+
+    const verifyAdmin = async (req, res, next) => {
+      if (req.user?.role !== "admin") {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      next();
+    };
+
+    const verifyRecruiter = async (req, res, next) => {
+      if (req.user?.role !== "recruiter") {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      next();
+    };
+
+    // Get all users
+    app.get("/users", verifyToken, async (req, res) => {
+      try {
+        const users = await userCollections.find().toArray();
+
+        res.json({
+          success: true,
+          users,
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to fetch users",
+        });
+      }
+    });
     app.get("/jobs", async (req, res) => {
       const query = {};
 
@@ -189,20 +264,26 @@ async function run() {
     });
 
     // Get company by ID(For Admin/findby company id)
-    app.patch("/company/:id", logger, verifyToken, async (req, res) => {
-      const { id } = req.params;
+    app.patch(
+      "/company/:id",
+      logger,
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
 
-      const { status } = req.body; // 👈 only take status
+        const { status } = req.body; // 👈 only take status
 
-      const result = await companyCollections.updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $set: { status }, // 👈 only update status
-        },
-      );
+        const result = await companyCollections.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: { status }, // 👈 only update status
+          },
+        );
 
-      res.send(result);
-    });
+        res.send(result);
+      },
+    );
 
     // Get company by ID (Recruiter use/find by recruiter ID)
     app.get("/my/company/:id", async (req, res) => {
@@ -227,7 +308,7 @@ async function run() {
       res.send(result);
     });
     // Get applicant jobs by companyId(FOr recruiter)
-    app.get("/seeker/jobs/company/:id", async (req, res) => {
+    app.get("/seeker/jobs/company/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
 
       const result = await seekerJobCollections
@@ -237,15 +318,20 @@ async function run() {
       res.send(result);
     });
     // Get applicants jobs(For seeker/applicant)
-    app.get("/seeker/jobs/seeker/:id", async (req, res) => {
-      const { id } = req.params;
+    app.get(
+      "/seeker/jobs/seeker/:id",
+      verifyToken,
+      verifyRecruiter,
+      async (req, res) => {
+        const { id } = req.params;
 
-      const result = await seekerJobCollections
-        .find({ seekerId: id })
-        .toArray();
+        const result = await seekerJobCollections
+          .find({ seekerId: id })
+          .toArray();
 
-      res.send(result);
-    });
+        res.send(result);
+      },
+    );
     // Create user profile:
     app.post("/profile", async (req, res) => {
       const profile = req.body;
