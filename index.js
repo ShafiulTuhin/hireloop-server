@@ -11,6 +11,29 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 app.use(cors());
 app.use(express.json());
 
+const verifyToken = async (req, res, next) => {
+  const header = req?.headers.authorization;
+  if (!header) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const token = header.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    // console.log(payload);
+
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+};
+const logger = async (req, res, next) => {
+  console.log("Logger....");
+  next();
+};
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
@@ -160,13 +183,13 @@ async function run() {
       res.send(result);
     });
     // Get companies
-    app.get("/company", async (req, res) => {
+    app.get("/company", verifyToken, async (req, res) => {
       const result = await companyCollections.find().toArray();
       res.send(result);
     });
 
     // Get company by ID(For Admin/findby company id)
-    app.patch("/company/:id", async (req, res) => {
+    app.patch("/company/:id", logger, verifyToken, async (req, res) => {
       const { id } = req.params;
 
       const { status } = req.body; // 👈 only take status
