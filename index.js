@@ -87,7 +87,7 @@ async function run() {
 
       const user = await userCollections.findOne(userQuery);
       console.log(user);
-      // req.user = user
+      req.user = user;
 
       next();
       // try {
@@ -101,6 +101,13 @@ async function run() {
       //     error: error.message,
       //   });
       // }
+    };
+
+    const verifySeeker = async (req, res, next) => {
+      if (req.user?.role !== "seeker") {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      next();
     };
 
     const verifyAdmin = async (req, res, next) => {
@@ -258,9 +265,19 @@ async function run() {
       res.send(result);
     });
     // Get companies
-    app.get("/company", verifyToken, async (req, res) => {
-      const result = await companyCollections.find().toArray();
-      res.send(result);
+    app.get("/company", verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const result = await companyCollections.find().toArray();
+
+        return res.send(result);
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+
+        return res.status(500).send({
+          success: false,
+          message: "Failed to fetch companies",
+        });
+      }
     });
 
     // Get company by ID(For Admin/findby company id)
@@ -303,7 +320,7 @@ async function run() {
       res.send(result);
     });
     //
-    app.get("/seeker/jobs", async (req, res) => {
+    app.get("/seeker/jobs", verifyToken, async (req, res) => {
       const result = await seekerJobCollections.find().toArray();
       res.send(result);
     });
@@ -321,7 +338,7 @@ async function run() {
     app.get(
       "/seeker/jobs/seeker/:id",
       verifyToken,
-      verifyRecruiter,
+
       async (req, res) => {
         const { id } = req.params;
 
@@ -384,7 +401,7 @@ async function run() {
           });
         }
 
-        return res.json(plan); // ALWAYS JSON
+        return res.json(plan);
       } catch (err) {
         return res.status(500).json({
           success: false,
